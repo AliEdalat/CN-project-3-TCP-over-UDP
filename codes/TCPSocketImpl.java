@@ -1,3 +1,5 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -12,35 +14,53 @@ public class TCPSocketImpl extends TCPSocket {
 	private EnhancedDatagramSocket datagramSocket = null;
 	private Connection connectionState;
 	private int port;
+	private int myPort;
 	private String ip;
 	private int sequenceNumber = 100;
+	private static int RTT = 10000;
+	private static int segmentDataSize = 1464;
 	
     public TCPSocketImpl(String ip, int port) throws Exception {
         super(ip, port);
-        datagramSocket = new EnhancedDatagramSocket(1238);
+        try {
+        	Random rand = new Random();
+        	this.myPort = 1238+rand.nextInt(50);
+        	datagramSocket = new EnhancedDatagramSocket(this.myPort);
+        } catch (Exception e) {
+        	Random rand = new Random();
+        	this.myPort = 1238+rand.nextInt(50)+rand.nextInt(30);
+        	datagramSocket = new EnhancedDatagramSocket(this.myPort);
+		}
         this.port = port;
         this.ip = ip;
         this.connectionState = null;
+        datagramSocket.setSoTimeout(RTT);
         this.handshake();
     }
     
-    // TODO: timeout send and res
     private void handshake() throws Exception {
     	if (connectionState != Connection.ESTABLISHED) {
-    		byte[] b = new Segment(new byte[0], true, false, 1238, this.port, this.sequenceNumber, 0, 0).getBytes();
+    		byte[] b = new Segment(new byte[0], true, false, this.myPort, this.port, this.sequenceNumber, 0, 0).getBytes();
             datagramSocket.send(new DatagramPacket(b, b.length, InetAddress.getByName(this.ip), this.port));
             this.connectionState = Connection.SYN_SENT;
             byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
         	DatagramPacket p = new DatagramPacket(data, data.length);
         	datagramSocket.receive(p);
         	if (p.getData().length < 16) {
-        		throw new Exception();
+        		this.connectionState = null;
+        		datagramSocket.close();
+        		throw new Exception("connection is failed.");
 			}
         	Segment segment = new Segment(p.getData());
         	if (segment.isAck() && segment.getAcknowledgmentNumber() == (this.sequenceNumber + 1)) {
 				this.connectionState = Connection.ESTABLISHED;
+				byte[] ack = new Segment(new byte[0], false, true, this.myPort, this.port, segment.getAcknowledgmentNumber(),
+						segment.getSequenceNumber()+1, 0).getBytes();
+	            datagramSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getByName(this.ip), this.port));
 			} else {
-				throw new Exception();
+				this.connectionState = null;
+				datagramSocket.close();
+				throw new Exception("connection is failed.");
 			}
 		}
     }
@@ -48,13 +68,21 @@ public class TCPSocketImpl extends TCPSocket {
     @Override
     public void send(String pathToFile) throws Exception {
     	// Split file to segments
-    	byte[] b = new Segment(pathToFile.getBytes(), true, true, 8, 7, 1, 0, 2).getBytes();
+    	char[] segmentData = new char[segmentDataSize];
+    	BufferedReader br = new BufferedReader(new FileReader(pathToFile));
+    	br.read(segmentData);
+    	byte[] data = new String(segmentData).getBytes();
+    	byte[] b = new Segment(data, false, false, this.myPort, this.port, 1, 0, 2).getBytes();
         datagramSocket.send(new DatagramPacket(b, b.length, InetAddress.getByName(this.ip), this.port));
     }
 
     @Override
     public void receive(String pathToFile) throws Exception {
-        throw new RuntimeException("Not implemented!");
+    	byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
+    	DatagramPacket p = new DatagramPacket(data, data.length);
+    	datagramSocket.receive(p);
+    	Segment segment = new Segment(p.getData());
+		System.out.println(segment.toString());
     }
 
     @Override
