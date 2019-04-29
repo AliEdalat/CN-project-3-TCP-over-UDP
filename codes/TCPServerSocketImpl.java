@@ -1,5 +1,7 @@
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 public class TCPServerSocketImpl extends TCPServerSocket {
 	enum Connection{
@@ -9,7 +11,7 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 	private EnhancedDatagramSocket datagramSocket = null;
 	private int sequenceNumber = 200;
 	private Connection connectionState;
-	private static int RTT = 10000;
+	private static int RTT = 30000;
 	
     public TCPServerSocketImpl(int port) throws Exception {
         super(port);
@@ -18,24 +20,42 @@ public class TCPServerSocketImpl extends TCPServerSocket {
         connectionState = null;
     }
 
+    private void sendSynAck(Segment segment) throws IOException {
+    	if (segment != null) {
+			byte[] ack = new Segment(new byte[0], false, true, segment.getDestinationPort(), segment.getSourcePort(),
+					this.sequenceNumber, segment.getSequenceNumber() + 1, 0).getBytes();
+			datagramSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getByName("127.0.0.1"), segment.getSourcePort()));
+			this.connectionState = Connection.SYN_RESEVED;
+		}
+	}
+
     @Override
     public TCPSocket accept() throws Exception {
     	int pairPort = 0;
+    	int synAckIterate = 5;
+		Segment segment = null;
     	byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
     	DatagramPacket p = new DatagramPacket(data, data.length);
         while (true) {
         	System.out.println('r');
-			datagramSocket.receive(p);
+        	try {
+				datagramSocket.receive(p);
+			}catch (Exception e){
+        		if (this.connectionState == Connection.SYN_RESEVED){
+					synAckIterate--;
+					if (synAckIterate == 0){
+						this.connectionState = null;
+					}
+					this.sendSynAck(segment);
+				}
+			}
 			if (p.getData().length < 16) {
 				continue;
 			}
-			Segment segment = new Segment(p.getData());
+			segment = new Segment(p.getData());
 			System.out.println(segment.toString());
 			if (segment.isSyn() && this.connectionState == null) {
-				byte[] ack = new Segment(new byte[0], false, true, segment.getDestinationPort(), segment.getSourcePort(),
-						this.sequenceNumber, segment.getSequenceNumber()+1, 0).getBytes();
-	            datagramSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getByName("127.0.0.1"), segment.getSourcePort()));
-	            this.connectionState = Connection.SYN_RESEVED;
+				this.sendSynAck(segment);
 			} else if (segment.isAck() && this.connectionState == Connection.SYN_RESEVED
 					&& segment.getAcknowledgmentNumber() == this.sequenceNumber+1) {
 				this.connectionState = Connection.ESTABLISHED;
