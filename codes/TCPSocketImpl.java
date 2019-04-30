@@ -114,7 +114,7 @@ public class TCPSocketImpl extends TCPSocket {
     public void send(String pathToFile) throws Exception {
     	// Split file to segments
     	char[] segmentData = new char[segmentDataSize];
-    	BufferedReader br = new BufferedReader(new FileReader("../../../src/" + pathToFile));
+    	BufferedReader br = new BufferedReader(new FileReader("/home/ali/workspace-UT/CN/CN3-int/src/" + pathToFile));
     	br.read(segmentData);
     	byte[] data = new String(segmentData).getBytes();
     	byte[] b = new Segment(data, false, false, this.myPort, this.port, 1, 0, 2).getBytes();
