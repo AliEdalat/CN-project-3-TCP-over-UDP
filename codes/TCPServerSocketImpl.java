@@ -12,9 +12,11 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 	private int sequenceNumber = 200;
 	private Connection connectionState;
 	private static int RTT = 30000;
+	private int port;
 	
     public TCPServerSocketImpl(int port) throws Exception {
         super(port);
+        this.port = port;
         datagramSocket = new EnhancedDatagramSocket(port);
         datagramSocket.setSoTimeout(RTT);
         connectionState = null;
@@ -22,7 +24,7 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 
     private void sendSynAck(Segment segment) throws IOException {
     	if (segment != null) {
-			byte[] ack = new Segment(new byte[0], false, true, segment.getDestinationPort(), segment.getSourcePort(),
+			byte[] ack = new Segment(new byte[0], true, true, segment.getDestinationPort(), segment.getSourcePort(),
 					this.sequenceNumber, segment.getSequenceNumber() + 1, 0).getBytes();
 			datagramSocket.send(new DatagramPacket(ack, ack.length, InetAddress.getByName("127.0.0.1"), segment.getSourcePort()));
 			this.connectionState = Connection.SYN_RESEVED;
@@ -64,7 +66,8 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 			}	
 		}
         System.out.println("ali");
-        return new TCPSocketBinded("127.0.0.1", pairPort);
+        System.out.println(pairPort);
+        return new TCPSocketBinded(datagramSocket, pairPort);
     }
 
     @Override

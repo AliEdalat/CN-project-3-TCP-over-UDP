@@ -1,3 +1,7 @@
+import java.net.DatagramPacket;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Random;
 
 public class TCPSocketBinded extends TCPSocket {
@@ -10,19 +14,10 @@ public class TCPSocketBinded extends TCPSocket {
     private EnhancedDatagramSocket datagramSocket;
     private int myPort;
 
-    public TCPSocketBinded(String ip, int port) throws Exception {
-        super(ip, port);
+    public TCPSocketBinded(EnhancedDatagramSocket datagramSocket, int port) throws Exception {
+        super(datagramSocket.getLocalAddress().getHostAddress(), port);
         System.out.println("binded");
-        try {
-            Random rand = new Random();
-            this.myPort = 1238+rand.nextInt(50);
-//        	this.myPort = this.freePort();
-            datagramSocket = new EnhancedDatagramSocket(this.myPort);
-        } catch (Exception e) {
-            Random rand = new Random();
-            this.myPort = 1238+rand.nextInt(50)+rand.nextInt(30);
-            datagramSocket = new EnhancedDatagramSocket(this.myPort);
-        }
+        this.datagramSocket = datagramSocket;
         this.port = port;
         this.ip = ip;
         datagramSocket.setSoTimeout(RTT);
@@ -35,7 +30,22 @@ public class TCPSocketBinded extends TCPSocket {
 
     @Override
     public void receive(String pathToFile) throws Exception {
-
+    	while(true) {
+	    	byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
+	    	DatagramPacket p = new DatagramPacket(data, data.length);
+	    	Date date = new Date();
+	        String strDateFormat = "hh:mm:ss a";
+	        DateFormat dateFormat = new SimpleDateFormat(strDateFormat);
+	        String formattedDate= dateFormat.format(date);
+	    	System.out.println(formattedDate);
+	    	try {
+	    		datagramSocket.receive(p);
+	    	} catch (Exception e) {
+				continue;
+			}
+	    	Segment segment = new Segment(p.getData());
+			System.out.println(new String(segment.getDataBytes()));
+    	}
     }
 
     @Override

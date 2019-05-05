@@ -1,10 +1,14 @@
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Random;
 
 public class TCPSocketImpl extends TCPSocket {
@@ -76,7 +80,7 @@ public class TCPSocketImpl extends TCPSocket {
             byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
         	DatagramPacket p = new DatagramPacket(data, data.length);
         	while(true) {
-        		if (this.connectionState == Connection.SYN_SENT && retry){
+        		if (this.connectionState == Connection.SYN_SENT  && retry){
         			synIterate--;
         			if (synIterate == 0){
 						this.closeUDP();
@@ -100,7 +104,7 @@ public class TCPSocketImpl extends TCPSocket {
 					continue;
 				}
 				Segment segment = new Segment(p.getData());
-				if (segment.isAck() && segment.getAcknowledgmentNumber() == (this.sequenceNumber + 1)) {
+				if (segment.isAck() && segment.isSyn() && segment.getAcknowledgmentNumber() == (this.sequenceNumber + 1)) {
 					this.sendACK(segment);
 					return;
 				} else {
@@ -113,12 +117,22 @@ public class TCPSocketImpl extends TCPSocket {
     @Override
     public void send(String pathToFile) throws Exception {
     	// Split file to segments
-    	char[] segmentData = new char[segmentDataSize];
-    	BufferedReader br = new BufferedReader(new FileReader("/home/ali/workspace-UT/CN/CN3-int/src/" + pathToFile));
-    	br.read(segmentData);
-    	byte[] data = new String(segmentData).getBytes();
-    	byte[] b = new Segment(data, false, false, this.myPort, this.port, 1, 0, 2).getBytes();
-        datagramSocket.send(new DatagramPacket(b, b.length, InetAddress.getByName(this.ip), this.port));
+    	while(true) {
+	    	File currentDirFile = new File("src/" + pathToFile);
+	    	char[] segmentData = new char[segmentDataSize];
+	    	BufferedReader br = new BufferedReader(new FileReader(currentDirFile));
+	    	br.read(segmentData);
+	    	System.out.println(segmentData);
+	    	byte[] data = new String(segmentData).getBytes();
+	    	byte[] b = new Segment(data, false, false, this.myPort, this.port, 1, 0, 2).getBytes();
+	    	System.out.println(new Segment(data, false, false, this.myPort, this.port, 1, 0, 2).toString());
+	        datagramSocket.send(new DatagramPacket(b, b.length, InetAddress.getByName(this.ip), this.port));
+	        Date date = new Date();
+	        String strDateFormat = "hh:mm:ss a";
+	        DateFormat dateFormat = new SimpleDateFormat(strDateFormat);
+	        String formattedDate= dateFormat.format(date);
+	    	System.out.println(formattedDate);
+    	}
     }
 
     @Override
