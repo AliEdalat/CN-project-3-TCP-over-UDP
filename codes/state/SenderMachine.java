@@ -1,9 +1,12 @@
 package state;
 
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class SenderMachine extends TimerTask{
+
+	private static int RTT = 10000;
 	
 	private SenderState fastRecoveryState;
 	private SenderState slowStartState;
@@ -39,6 +42,8 @@ public class SenderMachine extends TimerTask{
 		this.dupAckCount = 0;
 		this.base = 0;
 		this.senderState = slowStartState;
+		this.ackPacketNumber = 0;
+		this.transmitNewSegments();
 	}
 	
 	public void setSenderState(SenderState senderState) {
@@ -67,6 +72,11 @@ public class SenderMachine extends TimerTask{
 
 	public int getAckPacketNumber() {
 		return ackPacketNumber;
+	}
+
+	public void updateTimer() {
+		timer.cancel();
+		timer.schedule(this, new Date().getTime() + (2 * RTT));
 	}
 
 	public int getLastSentPacket() {
