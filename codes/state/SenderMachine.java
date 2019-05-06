@@ -12,17 +12,20 @@ public class SenderMachine extends TimerTask{
 	private SenderState senderState;
 	
 	private Timer timer;		// Timer.cancel();
-	private int cwnd;
+	private float cwnd;
 	private int ssthresh;
 	private int dupAckCount;
+	private int base;
+	private int ackPacketNumber;
+	private int lastSentPacket;
 	
 	
 	
-	private void retransmitMissingSegment() {
+	public void retransmitMissingSegment() {
 		
 	}
 	
-	private void transmitNewSegment() {
+	public void transmitNewSegments() {
 		
 	}
 	
@@ -31,6 +34,10 @@ public class SenderMachine extends TimerTask{
 		this.slowStartState = new SlowStartState(this);
 		this.congestionAvoidanceState = new CongestionAvoidanceState(this);
 		this.timer = new Timer();
+		this.cwnd = 1;
+		this.ssthresh = 8;
+		this.dupAckCount = 0;
+		this.base = 0;
 		this.senderState = slowStartState;
 	}
 	
@@ -57,7 +64,39 @@ public class SenderMachine extends TimerTask{
 	public void ssthreshExceed() {
 		
 	}
-	
+
+	public int getAckPacketNumber() {
+		return ackPacketNumber;
+	}
+
+	public int getLastSentPacket() {
+		return lastSentPacket;
+	}
+
+	public float getCwnd() {
+		return cwnd;
+	}
+
+	public void setCwnd(float cwnd) {
+		this.cwnd = cwnd;
+	}
+
+	public int getSsthresh() {
+		return ssthresh;
+	}
+
+	public void setSsthresh(int ssthresh) {
+		this.ssthresh = ssthresh;
+	}
+
+	public int getDupAckCount() {
+		return dupAckCount;
+	}
+
+	public void setDupAckCount(int dupAckCount) {
+		this.dupAckCount = dupAckCount;
+	}
+
 	public SenderState getFastRecoveryState() {
 		return fastRecoveryState;
 	}
