@@ -1,8 +1,11 @@
+package TCPSocket;
+
+import datagram.*;
+
 import java.net.DatagramPacket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Random;
 
 public class TCPSocketBinded extends TCPSocket {
 
