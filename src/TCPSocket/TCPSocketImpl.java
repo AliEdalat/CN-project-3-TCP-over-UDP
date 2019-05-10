@@ -1,6 +1,7 @@
 package TCPSocket;
 
 import datagram.*;
+import senderState.SenderMachine;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.util.ArrayList;
 import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -119,32 +121,27 @@ public class TCPSocketImpl extends TCPSocket {
 
     @Override
     public void send(String pathToFile) throws Exception {
-    	// Split file to segments
-    	while(true) {
-	    	File currentDirFile = new File("src/" + pathToFile);
-	    	char[] segmentData = new char[segmentDataSize];
-	    	BufferedReader br = new BufferedReader(new FileReader(currentDirFile));
-	    	br.read(segmentData);
-	    	System.out.println(segmentData);
+		ArrayList<Segment> segments = new ArrayList<>();
+		File currentDirFile = new File("src/" + pathToFile);
+		char[] segmentData = new char[segmentDataSize];
+		BufferedReader br = new BufferedReader(new FileReader(currentDirFile));
+		int seqNum = 0;
+    	while(br.read(segmentData) != -1) {
+//	    	System.out.println(segmentData);
 	    	byte[] data = new String(segmentData).getBytes();
-	    	byte[] b = new Segment(data, false, false, this.myPort, this.port, 1, 0, 2).getBytes();
-	    	System.out.println(new Segment(data, false, false, this.myPort, this.port, 1, 0, 2).toString());
-	        datagramSocket.send(new DatagramPacket(b, b.length, InetAddress.getByName(this.ip), this.port));
-	        Date date = new Date();
-	        String strDateFormat = "hh:mm:ss a";
-	        DateFormat dateFormat = new SimpleDateFormat(strDateFormat);
-	        String formattedDate= dateFormat.format(date);
-	    	System.out.println(formattedDate);
+	    	Segment segment= new Segment(data, false, false, this.myPort, this.port, sequenceNumber++, 0, 2);
+	    	segments.add(segment);
     	}
+		SenderMachine senderMachine = new SenderMachine(this.datagramSocket , segments);
     }
 
     @Override
     public void receive(String pathToFile) throws Exception {
-    	byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
-    	DatagramPacket p = new DatagramPacket(data, data.length);
-    	datagramSocket.receive(p);
-    	Segment segment = new Segment(p.getData());
-		System.out.println(segment.toString());
+//    	byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
+//		DatagramPacket p = new DatagramPacket(data, data.length);
+//		datagramSocket.receive(p);
+//		Segment segment = new Segment(p.getData());
+//		System.out.println(segment.toString());
     }
 
     @Override

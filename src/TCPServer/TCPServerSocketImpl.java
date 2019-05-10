@@ -8,6 +8,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 
 public class TCPServerSocketImpl extends TCPServerSocket {
+
 	enum Connection{
 		  SYN_RESEVED,
 		  ESTABLISHED
@@ -43,7 +44,6 @@ public class TCPServerSocketImpl extends TCPServerSocket {
     	byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
     	DatagramPacket p = new DatagramPacket(data, data.length);
         while (true) {
-        	System.out.println('r');
         	try {
 				datagramSocket.receive(p);
 			}catch (Exception e){
@@ -69,7 +69,6 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 				break;
 			}	
 		}
-        System.out.println("ali");
         System.out.println(pairPort);
         return new TCPSocketBinded(datagramSocket, pairPort);
     }

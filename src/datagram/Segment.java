@@ -27,8 +27,8 @@ public class Segment {
 	
 	public Segment(byte[] all) {
 		this.dataBytes = this.getData(all);
-		this.syn = (this.getSyn(all) == 1 ? true : false);
-		this.ack = (this.getAck(all) == 1 ? true : false);
+		this.syn = (this.getSyn(all) == 1);
+		this.ack = (this.getAck(all) == 1);
 		this.sourcePort = this.getSourcePort(all);
 		this.destinationPort = this.getDestinationPort(all);
 		this.sequenceNumber = this.getSequenceNumber(all);

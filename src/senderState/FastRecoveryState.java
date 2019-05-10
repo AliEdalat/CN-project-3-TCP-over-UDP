@@ -26,9 +26,11 @@ public class FastRecoveryState implements SenderState{
 
 	@Override
 	public void newAck() {
-		if (this.senderMachine.getAckPacketNumber() < this.senderMachine.getLastSentPacket()){
-			this.senderMachine.setCwnd(this.senderMachine.getCwnd() - this.senderMachine.getAckPacketNumber());
+		if (this.senderMachine.getLastAck() < this.senderMachine.getLastSeqSent()){
+			this.senderMachine.setCwnd(this.senderMachine.getCwnd() - this.senderMachine.getLastAck());
 			this.senderMachine.retransmitMissingSegment();
+			this.senderMachine.updateTimer();
+			return;
 		}
 		this.senderMachine.setCwnd(this.senderMachine.getSsthresh());
 		this.senderMachine.setDupAckCount(0);

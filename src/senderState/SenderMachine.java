@@ -1,8 +1,17 @@
 package senderState;
 
-import java.util.Date;
+import datagram.EnhancedDatagramSocket;
+import datagram.Segment;
+
+import javax.swing.*;
+import java.io.IOException;
+import java.lang.reflect.Array;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.Timer;
-import java.util.TimerTask;
 
 public class SenderMachine extends TimerTask{
 
@@ -13,26 +22,72 @@ public class SenderMachine extends TimerTask{
 	private SenderState congestionAvoidanceState;
 	
 	private SenderState senderState;
-	
-	private Timer timer;		// Timer.cancel();
+	private String ip = "127.0.0.1";
+	private Timer timer;
 	private float cwnd;
 	private int ssthresh;
 	private int dupAckCount;
 	private int base;
-	private int ackPacketNumber;
-	private int lastSentPacket;
-	
-	
-	//TODO:Complete uncompleted classes
+	private int lastSeqSent;
+	private int lastAck;
+	private EnhancedDatagramSocket datagramSocket;
+	private ArrayList<Segment> segments;
+	private ArrayList<Boolean> segmentAcks;
+
+	private class Reciever extends Thread {
+
+		private Boolean isAck(int segAckNum){
+			return segmentAcks.get(segAckNum);
+		}
+
+		@Override
+		public void run() {
+			byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
+			DatagramPacket p = new DatagramPacket(data, data.length);
+			try {
+				datagramSocket.receive(p);
+				Segment segment = new Segment(p.getData());
+				System.out.println(segment.toString());
+				if (segment.isAck() && !isAck(segment.getAcknowledgmentNumber()) ){
+					segmentAcks.set(segment.getAcknowledgmentNumber(), true);
+					base += 1;
+					lastAck = segment.getAcknowledgmentNumber();
+					newAck();
+				} else if (segment.isAck() && isAck(segment.getAcknowledgmentNumber())){
+					dupAck();
+				}
+			} catch (Exception e){
+
+			}
+		}
+	}
+
 	public void retransmitMissingSegment() {
-		
+		Segment segment = segments.get(this.base);
+		byte[] segmentBytes = segment.getBytes();
+		try {
+			datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
+					segment.getDestinationPort()));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public void transmitNewSegments() {
-		
+		for (int i = base; i < base+cwnd; i++){
+			Segment segment = segments.get(i);
+			byte[] segmentBytes = segment.getBytes();
+			try {
+				datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
+						segment.getDestinationPort()));
+				lastSeqSent = segment.getSequenceNumber();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
-	public SenderMachine() {
+	public SenderMachine(EnhancedDatagramSocket datagramSocket, ArrayList<Segment> segments) {
 		this.fastRecoveryState = new FastRecoveryState(this);
 		this.slowStartState = new SlowStartState(this);
 		this.congestionAvoidanceState = new CongestionAvoidanceState(this);
@@ -42,7 +97,9 @@ public class SenderMachine extends TimerTask{
 		this.dupAckCount = 0;
 		this.base = 0;
 		this.senderState = slowStartState;
-		this.ackPacketNumber = 0;
+		this.datagramSocket = datagramSocket;
+		this.segments = segments;
+		timer.schedule(this, new Date().getTime() + (2 * RTT));
 		this.transmitNewSegments();
 	}
 	
@@ -50,37 +107,19 @@ public class SenderMachine extends TimerTask{
 		this.senderState = senderState;
 	}
 	
-	public void timeOut() {
-		
-	}
+	public void timeOut() { senderState.timeOut(); }
 	
-	public void newAck() {
-		
-	}
+	public void newAck() { senderState.newAck(); }
 	
-	public void dupAck() {
-		
-	}
+	public void dupAck() { senderState.dupAck(); }
 	
-	public void threeDupAck() {
-		
-	}
+	public void threeDupAck() { senderState.threeDupAck(); }
 	
-	public void ssthreshExceed() {
-		
-	}
-
-	public int getAckPacketNumber() {
-		return ackPacketNumber;
-	}
+	public void ssthreshExceed() { senderState.ssthreshExceed(); }
 
 	public void updateTimer() {
 		timer.cancel();
 		timer.schedule(this, new Date().getTime() + (2 * RTT));
-	}
-
-	public int getLastSentPacket() {
-		return lastSentPacket;
 	}
 
 	public float getCwnd() {
@@ -118,6 +157,12 @@ public class SenderMachine extends TimerTask{
 	public SenderState getCongestionAvoidanceState() {
 		return congestionAvoidanceState;
 	}
+
+	public int getBase() { return base; }
+
+	public int getLastAck() { return lastAck; }
+
+	public int getLastSeqSent() { return lastSeqSent; }
 
 	@Override
 	public void run() {
