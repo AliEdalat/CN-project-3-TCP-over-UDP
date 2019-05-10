@@ -16,7 +16,7 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 	private EnhancedDatagramSocket datagramSocket = null;
 	private int sequenceNumber = 200;
 	private Connection connectionState;
-	private static int RTT = 30000;
+	private static int RTT = 10000;
 	private int port;
 	
     public TCPServerSocketImpl(int port) throws Exception {
@@ -51,6 +51,7 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 					synAckIterate--;
 					if (synAckIterate == 0){
 						this.connectionState = null;
+						continue;
 					}
 					this.sendSynAck(segment);
 				}

@@ -36,7 +36,7 @@ public class SenderMachine extends TimerTask{
 
 	private class Reciever extends Thread {
 
-		private Boolean isAck(int segAckNum){
+		private Boolean isAcked(int segAckNum){
 			return segmentAcks.get(segAckNum);
 		}
 
@@ -44,26 +44,28 @@ public class SenderMachine extends TimerTask{
 		public void run() {
 			byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
 			DatagramPacket p = new DatagramPacket(data, data.length);
-			try {
-				datagramSocket.receive(p);
-				Segment segment = new Segment(p.getData());
-				System.out.println(segment.toString());
-				if (segment.isAck() && !isAck(segment.getAcknowledgmentNumber()) ){
-					segmentAcks.set(segment.getAcknowledgmentNumber(), true);
-					base += 1;
-					lastAck = segment.getAcknowledgmentNumber();
-					newAck();
-				} else if (segment.isAck() && isAck(segment.getAcknowledgmentNumber())){
-					dupAck();
+			while(true) {
+				try {
+					datagramSocket.receive(p);
+					Segment segment = new Segment(p.getData());
+					System.out.println("sender ma rec run " + segment.toString());
+					if (segment.isAck() && !isAcked(segment.getAcknowledgmentNumber()) ){
+						segmentAcks.set(segment.getAcknowledgmentNumber(), true);
+						base += 1;
+						lastAck = segment.getAcknowledgmentNumber();
+						newAck();
+					} else if (segment.isAck() && isAcked(segment.getAcknowledgmentNumber())){
+						dupAck();
+					}
+				} catch (Exception e){
+	
 				}
-			} catch (Exception e){
-
 			}
 		}
 	}
 
 	public void retransmitMissingSegment() {
-		Segment segment = segments.get(this.base);
+		Segment segment = segments.get(this.lastAck);
 		byte[] segmentBytes = segment.getBytes();
 		try {
 			datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
@@ -74,6 +76,8 @@ public class SenderMachine extends TimerTask{
 	}
 	
 	public void transmitNewSegments() {
+		System.out.println(base);
+		System.out.println(cwnd);
 		for (int i = base; i < base+cwnd; i++){
 			Segment segment = segments.get(i);
 			byte[] segmentBytes = segment.getBytes();
@@ -93,14 +97,22 @@ public class SenderMachine extends TimerTask{
 		this.congestionAvoidanceState = new CongestionAvoidanceState(this);
 		this.timer = new Timer();
 		this.cwnd = 1;
-		this.ssthresh = 8;
+		this.ssthresh = 3;
 		this.dupAckCount = 0;
 		this.base = 0;
 		this.senderState = slowStartState;
 		this.datagramSocket = datagramSocket;
 		this.segments = segments;
-		timer.schedule(this, new Date().getTime() + (2 * RTT));
+		segmentAcks = new ArrayList<>();
+		for(Segment segment : segments) {
+			segmentAcks.add(false);
+		}
+		Reciever reciever = new Reciever();
+		reciever.start();
 		this.transmitNewSegments();
+		timer.schedule(this, new Date().getTime() + (2 * RTT));
+//		reciever.run();
+		while(true) {}
 	}
 	
 	public void setSenderState(SenderState senderState) {
@@ -109,7 +121,7 @@ public class SenderMachine extends TimerTask{
 	
 	public void timeOut() { senderState.timeOut(); }
 	
-	public void newAck() { senderState.newAck(); }
+	public void newAck() { System.out.println("newAck"); senderState.newAck(); }
 	
 	public void dupAck() { senderState.dupAck(); }
 	

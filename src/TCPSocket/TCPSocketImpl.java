@@ -77,7 +77,7 @@ public class TCPSocketImpl extends TCPSocket {
 
 	// TODO: retry send ack
     private void handshake() throws Exception {
-    	int synIterate = 3;
+    	int synIterate = 30;
     	int synAckIterate = 30;
     	boolean retry = false;
     	if (connectionState != Connection.ESTABLISHED) {
@@ -129,7 +129,7 @@ public class TCPSocketImpl extends TCPSocket {
     	while(br.read(segmentData) != -1) {
 //	    	System.out.println(segmentData);
 	    	byte[] data = new String(segmentData).getBytes();
-	    	Segment segment= new Segment(data, false, false, this.myPort, this.port, sequenceNumber++, 0, 2);
+	    	Segment segment= new Segment(data, false, false, this.myPort, this.port, seqNum++, 0, 2);
 	    	segments.add(segment);
     	}
 		SenderMachine senderMachine = new SenderMachine(this.datagramSocket , segments);
