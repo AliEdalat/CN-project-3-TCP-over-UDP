@@ -17,7 +17,7 @@ public class FastRecoveryState implements SenderState{
 		this.senderMachine.setSsthresh(newSsthresh);
 		this.senderMachine.setDupAckCount(0);
 		this.senderMachine.retransmitMissingSegment();
-		this.senderMachine.updateTimer();
+//		this.senderMachine.updateTimer();
 		this.senderMachine.setSenderState(this.senderMachine.getSlowStartState());
 	}
 
@@ -29,16 +29,16 @@ public class FastRecoveryState implements SenderState{
 	@Override
 	public void newAck() {
 		System.out.println("FastRecoveryState-newAck");
-		if (this.senderMachine.getLastAck() < this.senderMachine.getLastSeqSent()){
+		if (this.senderMachine.getBase() < this.senderMachine.getLastSeqSent()){
 			this.senderMachine.setCwnd(this.senderMachine.getCwnd() -
-					(this.senderMachine.getLastAck() - this.senderMachine.getBase()));
+					this.senderMachine.getNumberOfAckSegments());
 			this.senderMachine.retransmitMissingSegment();
-			this.senderMachine.updateTimer();
+//			this.senderMachine.updateTimer();
 			return;
 		}
 		this.senderMachine.setCwnd(this.senderMachine.getSsthresh());
 		this.senderMachine.setDupAckCount(0);
-		this.senderMachine.updateTimer();
+//		this.senderMachine.updateTimer();
 		this.senderMachine.setSenderState(this.senderMachine.getCongestionAvoidanceState());
 	}
 

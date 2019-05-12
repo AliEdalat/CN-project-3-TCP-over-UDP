@@ -13,7 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Timer;
 
-public class SenderMachine extends TimerTask{
+public class SenderMachine {
 
 	private static int RTT = 10000;
 	
@@ -23,19 +23,52 @@ public class SenderMachine extends TimerTask{
 	
 	private SenderState senderState;
 	private String ip = "127.0.0.1";
-	private Timer timer;
+//	private static Timer timer = new Timer();
+	private TimerHandler timerHandler;
 	private float cwnd;
 	private int ssthresh;
 	private int dupAckCount;
 	private int base;
 	private int lastSeqSent;
-	private int lastAck;
+	private int numberOfAckSegments;
 	private EnhancedDatagramSocket datagramSocket;
 	private ArrayList<Segment> segments;
 	private ArrayList<Boolean> segmentAcks;
+	
+	private class MyTimerTask  extends TimerTask {
+		@Override
+		public void run() {
+			timeOut();
+		}
+	}
+	
+	private class TimerHandler extends Thread {
+		private Timer timer = new Timer();
+		private MyTimerTask myTimerTask = new MyTimerTask();
+		private boolean end = false;
+		
+		@Override
+		public void run() {
+			timer.schedule(myTimerTask, new Date().getTime() + (2 * RTT));
+			while (!end) {}
+			System.out.println("Thread  exiting.");
+		}
+		
+		public void setEnd(boolean end) {
+			this.end = end;
+		}
+//		
+//		public void cancel() {
+//			timer.cancel();
+//		}
+//		
+//		public void schedule() {
+//			timer.schedule(myTimerTask, new Date().getTime() + (2 * RTT));
+//		}
+	}
 
 	public void retransmitMissingSegment() {
-		Segment segment = segments.get(this.lastAck);
+		Segment segment = segments.get(this.base);
 		byte[] segmentBytes = segment.getBytes();
 		try {
 			datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
@@ -59,13 +92,15 @@ public class SenderMachine extends TimerTask{
 				e.printStackTrace();
 			}
 		}
+		System.out.println("\ntransmit is ended?");
 	}
 	
 	public SenderMachine(EnhancedDatagramSocket datagramSocket, ArrayList<Segment> segments) {
 		this.fastRecoveryState = new FastRecoveryState(this);
 		this.slowStartState = new SlowStartState(this);
 		this.congestionAvoidanceState = new CongestionAvoidanceState(this);
-		this.timer = new Timer();
+//		this.timer = new Timer();
+//		this.myTimerTask = new MyTimerTask();
 		this.cwnd = 1;
 		this.ssthresh = 3;
 		this.dupAckCount = 0;
@@ -78,8 +113,13 @@ public class SenderMachine extends TimerTask{
 			segmentAcks.add(false);
 		}
 		this.transmitNewSegments();
-		timer.schedule(this, new Date().getTime() + (2 * RTT));
+//		timer.schedule(myTimerTask, new Date().getTime() + (2 * RTT));
+//		this.timerHandler = new TimerHandler();
+//		timerHandler.start();
 		this.runFsm();
+//		while (true) {
+//			
+//		}
 	}
 
 	private Boolean isAcked(int segAckNum){
@@ -96,9 +136,11 @@ public class SenderMachine extends TimerTask{
 				System.out.println("sender ma rec run " + segment.toString());
 				if (segment.isAck() && !isAcked(segment.getAcknowledgmentNumber()) ){
 					segmentAcks.set(segment.getAcknowledgmentNumber(), true);
-					base += 1;
-					lastAck = segment.getAcknowledgmentNumber();
+					numberOfAckSegments = segment.getAcknowledgmentNumber() - this.base;
+					base = segment.getAcknowledgmentNumber();;
+					System.out.println("\nbf new");
 					newAck();
+					System.out.println("\n after new");
 				} else if (segment.isAck() && isAcked(segment.getAcknowledgmentNumber())){
 					dupAck();
 				}
@@ -112,9 +154,9 @@ public class SenderMachine extends TimerTask{
 		this.senderState = senderState;
 	}
 	
-	public void timeOut() { senderState.timeOut(); }
+	public void timeOut() { System.out.println("timeout"); senderState.timeOut(); }
 	
-	public void newAck() { System.out.println("newAck"); senderState.newAck(); }
+	public void newAck() { senderState.newAck(); }
 	
 	public void dupAck() { senderState.dupAck(); }
 	
@@ -123,8 +165,8 @@ public class SenderMachine extends TimerTask{
 	public void ssthreshExceed() { senderState.ssthreshExceed(); }
 
 	public void updateTimer() {
-		timer.cancel();
-		timer.schedule(this, new Date().getTime() + (2 * RTT));
+		timerHandler.setEnd(true);
+		timerHandler = new TimerHandler();
 	}
 
 	public float getCwnd() {
@@ -165,12 +207,8 @@ public class SenderMachine extends TimerTask{
 
 	public int getBase() { return base; }
 
-	public int getLastAck() { return lastAck; }
+	public int getNumberOfAckSegments() { return numberOfAckSegments; }
 
 	public int getLastSeqSent() { return lastSeqSent; }
 
-	@Override
-	public void run() {
-		this.timeOut();
-	}
 }

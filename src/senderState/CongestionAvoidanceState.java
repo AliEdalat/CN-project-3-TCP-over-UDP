@@ -17,7 +17,7 @@ public class CongestionAvoidanceState implements SenderState{
 		this.senderMachine.setSsthresh(newSsthresh);
 		this.senderMachine.setDupAckCount(0);
 		this.senderMachine.retransmitMissingSegment();
-		this.senderMachine.updateTimer();
+//		this.senderMachine.updateTimer();
 		this.senderMachine.setSenderState(this.senderMachine.getSlowStartState());
 	}
 
@@ -29,7 +29,7 @@ public class CongestionAvoidanceState implements SenderState{
 		this.senderMachine.setCwnd(newSsthresh + 3);
 		this.senderMachine.setSsthresh(newSsthresh);
 		this.senderMachine.retransmitMissingSegment();
-		this.senderMachine.updateTimer();
+//		this.senderMachine.updateTimer();
 		this.senderMachine.setSenderState(this.senderMachine.getFastRecoveryState());
 	}
 
@@ -49,8 +49,8 @@ public class CongestionAvoidanceState implements SenderState{
 		System.out.println("CongestionAvoidanceState-dupAck");
 		int dupAckCount = this.senderMachine.getDupAckCount();
 		this.senderMachine.setDupAckCount(dupAckCount + 1);
-		this.senderMachine.updateTimer();
-		this.senderMachine.setSenderState(this.senderMachine.getSlowStartState());
+//		this.senderMachine.updateTimer();
+		this.senderMachine.setSenderState(this.senderMachine.getCongestionAvoidanceState());
 		if (dupAckCount + 1 == 3) {
 			this.senderMachine.threeDupAck();
 		}
