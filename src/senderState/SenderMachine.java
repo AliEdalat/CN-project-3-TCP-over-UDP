@@ -34,36 +34,6 @@ public class SenderMachine extends TimerTask{
 	private ArrayList<Segment> segments;
 	private ArrayList<Boolean> segmentAcks;
 
-	private class Reciever extends Thread {
-
-		private Boolean isAcked(int segAckNum){
-			return segmentAcks.get(segAckNum);
-		}
-
-		@Override
-		public void run() {
-			byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
-			DatagramPacket p = new DatagramPacket(data, data.length);
-			while(true) {
-				try {
-					datagramSocket.receive(p);
-					Segment segment = new Segment(p.getData());
-					System.out.println("sender ma rec run " + segment.toString());
-					if (segment.isAck() && !isAcked(segment.getAcknowledgmentNumber()) ){
-						segmentAcks.set(segment.getAcknowledgmentNumber(), true);
-						base += 1;
-						lastAck = segment.getAcknowledgmentNumber();
-						newAck();
-					} else if (segment.isAck() && isAcked(segment.getAcknowledgmentNumber())){
-						dupAck();
-					}
-				} catch (Exception e){
-	
-				}
-			}
-		}
-	}
-
 	public void retransmitMissingSegment() {
 		Segment segment = segments.get(this.lastAck);
 		byte[] segmentBytes = segment.getBytes();
@@ -107,12 +77,35 @@ public class SenderMachine extends TimerTask{
 		for(Segment segment : segments) {
 			segmentAcks.add(false);
 		}
-		Reciever reciever = new Reciever();
-		reciever.start();
 		this.transmitNewSegments();
 		timer.schedule(this, new Date().getTime() + (2 * RTT));
-//		reciever.run();
-		while(true) {}
+		this.runFsm();
+	}
+
+	private Boolean isAcked(int segAckNum){
+		return segmentAcks.get(segAckNum);
+	}
+
+	private void runFsm() {
+		byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
+		DatagramPacket p = new DatagramPacket(data, data.length);
+		while(true) {
+			try {
+				datagramSocket.receive(p);
+				Segment segment = new Segment(p.getData());
+				System.out.println("sender ma rec run " + segment.toString());
+				if (segment.isAck() && !isAcked(segment.getAcknowledgmentNumber()) ){
+					segmentAcks.set(segment.getAcknowledgmentNumber(), true);
+					base += 1;
+					lastAck = segment.getAcknowledgmentNumber();
+					newAck();
+				} else if (segment.isAck() && isAcked(segment.getAcknowledgmentNumber())){
+					dupAck();
+				}
+			} catch (Exception e){
+
+			}
+		}
 	}
 	
 	public void setSenderState(SenderState senderState) {
