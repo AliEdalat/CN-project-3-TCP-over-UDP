@@ -50,7 +50,7 @@ public class TCPSocketBinded extends TCPSocket {
 	    	Segment segment = new Segment(p.getData());
 			System.out.println(new String(segment.getDataBytes()));
 			Segment newSegment = new Segment(segment.getDataBytes(), false, true, datagramSocket.getLocalPort(),
-					this.port, 0, segment.getSequenceNumber()+1, 2);
+					this.port, 0, segment.getSequenceNumber()+1, 20);
 			System.out.println(newSegment.toString());
 			System.out.println(segment.toString());
 			datagramSocket.send(new DatagramPacket(newSegment.getBytes(),newSegment.getBytes().length, InetAddress.getByName(this.ip), segment.getSourcePort()));

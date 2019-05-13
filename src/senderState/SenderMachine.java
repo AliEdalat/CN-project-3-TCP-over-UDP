@@ -34,6 +34,8 @@ public class SenderMachine {
 	private EnhancedDatagramSocket datagramSocket;
 	private ArrayList<Segment> segments;
 	private ArrayList<Boolean> segmentAcks;
+	private long start;
+	private int rcvWindowSize;
 	
 	private class MyTimerTask  extends TimerTask {
 		@Override
@@ -68,28 +70,34 @@ public class SenderMachine {
 	}
 
 	public void retransmitMissingSegment() {
-		Segment segment = segments.get(this.base);
-		byte[] segmentBytes = segment.getBytes();
-		try {
-			datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
-					segment.getDestinationPort()));
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (rcvWindowSize >= 1) {
+			Segment segment = segments.get(this.base);
+			byte[] segmentBytes = segment.getBytes();
+			try {
+				datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
+						segment.getDestinationPort()));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
 	public void transmitNewSegments() {
 		System.out.println(base);
 		System.out.println(cwnd);
+		int remainBuf = rcvWindowSize;
 		for (int i = base; i < base+cwnd; i++){
-			Segment segment = segments.get(i);
-			byte[] segmentBytes = segment.getBytes();
-			try {
-				datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
-						segment.getDestinationPort()));
-				lastSeqSent = segment.getSequenceNumber();
-			} catch (IOException e) {
-				e.printStackTrace();
+			if (remainBuf >= 1 && (segmentAcks.get(i) == false)) {
+				Segment segment = segments.get(i);
+				byte[] segmentBytes = segment.getBytes();
+				try {
+					datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
+							segment.getDestinationPort()));
+					lastSeqSent = segment.getSequenceNumber();
+					remainBuf -= 1;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		System.out.println("\ntransmit is ended?");
@@ -101,6 +109,7 @@ public class SenderMachine {
 		this.congestionAvoidanceState = new CongestionAvoidanceState(this);
 //		this.timer = new Timer();
 //		this.myTimerTask = new MyTimerTask();
+		this.rcvWindowSize = 1;
 		this.cwnd = 1;
 		this.ssthresh = 3;
 		this.dupAckCount = 0;
@@ -116,6 +125,7 @@ public class SenderMachine {
 //		timer.schedule(myTimerTask, new Date().getTime() + (2 * RTT));
 //		this.timerHandler = new TimerHandler();
 //		timerHandler.start();
+		this.start = new Date().getTime();
 		this.runFsm();
 //		while (true) {
 //			
@@ -130,18 +140,31 @@ public class SenderMachine {
 		byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
 		DatagramPacket p = new DatagramPacket(data, data.length);
 		while(true) {
+			System.out.println(">>>>>>>>>>>>>>>>>>> " + String.valueOf(segments.size()));
+			for(boolean b : segmentAcks) {
+				System.out.println(String.valueOf(b));
+			}
+			System.out.println(">>>>>>>>>>>>>>>>>>>>>");
+			if ((new Date().getTime() - this.start) > (2*RTT)) {
+				timeOut();
+			}
 			try {
 				datagramSocket.receive(p);
 				Segment segment = new Segment(p.getData());
 				System.out.println("sender ma rec run " + segment.toString());
-				if (segment.isAck() && !isAcked(segment.getAcknowledgmentNumber()) ){
-					segmentAcks.set(segment.getAcknowledgmentNumber(), true);
+				if (segment.isAck() && !isAcked(segment.getAcknowledgmentNumber() - 1) ){
+					segmentAcks.set(segment.getAcknowledgmentNumber() - 1, true);
 					numberOfAckSegments = segment.getAcknowledgmentNumber() - this.base;
-					base = segment.getAcknowledgmentNumber();;
+					base = segment.getAcknowledgmentNumber();
+					rcvWindowSize = segment.getWindowSize();
+					if (base >= segments.size()){
+						break;
+					}
 					System.out.println("\nbf new");
 					newAck();
 					System.out.println("\n after new");
 				} else if (segment.isAck() && isAcked(segment.getAcknowledgmentNumber())){
+					rcvWindowSize = segment.getWindowSize();
 					dupAck();
 				}
 			} catch (Exception e){
@@ -165,8 +188,7 @@ public class SenderMachine {
 	public void ssthreshExceed() { senderState.ssthreshExceed(); }
 
 	public void updateTimer() {
-		timerHandler.setEnd(true);
-		timerHandler = new TimerHandler();
+		this.start = new Date().getTime();
 	}
 
 	public float getCwnd() {

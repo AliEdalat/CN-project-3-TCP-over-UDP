@@ -17,7 +17,7 @@ public class FastRecoveryState implements SenderState{
 		this.senderMachine.setSsthresh(newSsthresh);
 		this.senderMachine.setDupAckCount(0);
 		this.senderMachine.retransmitMissingSegment();
-//		this.senderMachine.updateTimer();
+		this.senderMachine.updateTimer();
 		this.senderMachine.setSenderState(this.senderMachine.getSlowStartState());
 	}
 
@@ -33,12 +33,12 @@ public class FastRecoveryState implements SenderState{
 			this.senderMachine.setCwnd(this.senderMachine.getCwnd() -
 					this.senderMachine.getNumberOfAckSegments());
 			this.senderMachine.retransmitMissingSegment();
-//			this.senderMachine.updateTimer();
+			this.senderMachine.updateTimer();
 			return;
 		}
 		this.senderMachine.setCwnd(this.senderMachine.getSsthresh());
 		this.senderMachine.setDupAckCount(0);
-//		this.senderMachine.updateTimer();
+		this.senderMachine.updateTimer();
 		this.senderMachine.setSenderState(this.senderMachine.getCongestionAvoidanceState());
 	}
 

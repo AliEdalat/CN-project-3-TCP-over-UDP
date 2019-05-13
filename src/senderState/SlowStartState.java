@@ -17,7 +17,7 @@ public class SlowStartState implements SenderState {
 		this.senderMachine.setSsthresh(newSsthresh);
 		this.senderMachine.setDupAckCount(0);
 		this.senderMachine.retransmitMissingSegment();
-//		this.senderMachine.updateTimer();
+		this.senderMachine.updateTimer();
 		this.senderMachine.setSenderState(this.senderMachine.getSlowStartState());
 	}
 
@@ -29,7 +29,7 @@ public class SlowStartState implements SenderState {
 		this.senderMachine.setCwnd(newSsthresh + 3);
 		this.senderMachine.setSsthresh(newSsthresh);
 		this.senderMachine.retransmitMissingSegment();
-//		this.senderMachine.updateTimer();
+		this.senderMachine.updateTimer();
 		this.senderMachine.setSenderState(this.senderMachine.getFastRecoveryState());
 	}
 
@@ -41,7 +41,7 @@ public class SlowStartState implements SenderState {
 		this.senderMachine.setDupAckCount(0);
 		this.senderMachine.transmitNewSegments();
 		System.out.println("after trans in slow start");
-//		this.senderMachine.updateTimer();
+		this.senderMachine.updateTimer();
 		System.out.println("hhhhh>>>>>>>>>>>>>>>" + String.valueOf(cwnd));
 		if (cwnd + 1 >= this.senderMachine.getSsthresh()){
 			System.out.println("ssthresh ex");
@@ -56,7 +56,7 @@ public class SlowStartState implements SenderState {
 		System.out.println("SlowStartState-dupAck");
 		int dupAckCount = this.senderMachine.getDupAckCount();
 		this.senderMachine.setDupAckCount(dupAckCount + 1);
-//		this.senderMachine.updateTimer();
+		this.senderMachine.updateTimer();
 		this.senderMachine.setSenderState(this.senderMachine.getSlowStartState());
 		if (dupAckCount + 1 == 3) {
 			this.senderMachine.threeDupAck();
