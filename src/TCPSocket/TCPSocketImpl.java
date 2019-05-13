@@ -29,6 +29,7 @@ public class TCPSocketImpl extends TCPSocket {
 	private int sequenceNumber = 100;
 	private static int RTT = 10000;
 	private static int segmentDataSize = 1392;
+	private SenderMachine senderMachine;
 	
     public TCPSocketImpl(String ip, int port) throws Exception {
         super(ip, port);
@@ -132,7 +133,7 @@ public class TCPSocketImpl extends TCPSocket {
 	    	Segment segment= new Segment(data, false, false, this.myPort, this.port, seqNum++, 0, 2);
 	    	segments.add(segment);
     	}
-		SenderMachine senderMachine = new SenderMachine(this.datagramSocket , segments);
+		senderMachine = new SenderMachine(this.datagramSocket , segments);
     }
 
     @Override
@@ -146,16 +147,16 @@ public class TCPSocketImpl extends TCPSocket {
 
     @Override
     public void close() throws Exception {
-        throw new RuntimeException("Not implemented!");
+        datagramSocket.close();
     }
 
     @Override
     public long getSSThreshold() {
-        throw new RuntimeException("Not implemented!");
+        return senderMachine.getSsthresh();
     }
 
     @Override
     public long getWindowSize() {
-        throw new RuntimeException("Not implemented!");
+        return (long) senderMachine.getCwnd();
     }
 }
