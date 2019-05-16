@@ -35,7 +35,19 @@ public class Segment {
 		this.acknowledgmentNumber = this.getAcknowledgmentNumber(all);
 		this.windowSize = this.getWindowSize(all);
 	}
-	
+
+	public Segment(boolean syn, boolean ack, int sourcePort, int destinationPort,
+				   int sequenceNumber, int acknowledgmentNumber, int windowSize) {
+		this.dataBytes = new byte[20];
+		this.syn = syn;
+		this.ack = ack;
+		this.sourcePort = sourcePort;
+		this.destinationPort = destinationPort;
+		this.sequenceNumber = sequenceNumber;
+		this.acknowledgmentNumber = acknowledgmentNumber;
+		this.windowSize = windowSize;
+	}
+
 	public String toString() {
 		return "sp: " +String.valueOf(this.sourcePort)
 				+ " dp: " +String.valueOf(this.destinationPort)

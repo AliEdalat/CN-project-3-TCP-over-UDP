@@ -13,7 +13,7 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 		  SYN_RESEVED,
 		  ESTABLISHED
 	}
-	private EnhancedDatagramSocket datagramSocket = null;
+	private EnhancedDatagramSocket datagramSocket;
 	private int sequenceNumber = 200;
 	private Connection connectionState;
 	private static int RTT = 10000;
@@ -38,7 +38,7 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 
     @Override
     public TCPSocket accept() throws Exception {
-    	int pairPort = 0;
+    	int pairPort;
     	int synAckIterate = 5;
 		Segment segment = null;
     	byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
@@ -60,7 +60,6 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 				continue;
 			}
 			segment = new Segment(p.getData());
-			System.out.println(segment.toString());
 			if (segment.isSyn() && this.connectionState == null) {
 				this.sendSynAck(segment);
 			} else if (segment.isAck() && this.connectionState == Connection.SYN_RESEVED
@@ -70,12 +69,11 @@ public class TCPServerSocketImpl extends TCPServerSocket {
 				break;
 			}	
 		}
-        System.out.println(pairPort);
         return new TCPSocketBinded(datagramSocket, pairPort);
     }
 
     @Override
     public void close() throws Exception {
-        throw new RuntimeException("Not implemented!");
+        datagramSocket.close();
     }
 }

@@ -11,6 +11,7 @@ public class SlowStartState implements SenderState {
 	@Override
 	public void timeOut() {
 		System.out.println("SlowStartState-timeOut");
+
 		float cwnd = this.senderMachine.getCwnd();
 		int newSsthresh = Math.max((int)(cwnd/2), 2);
 		this.senderMachine.setCwnd(1);
@@ -40,11 +41,8 @@ public class SlowStartState implements SenderState {
 		this.senderMachine.setCwnd(1 + cwnd);
 		this.senderMachine.setDupAckCount(0);
 		this.senderMachine.transmitNewSegments();
-		System.out.println("after trans in slow start");
 		this.senderMachine.updateTimer();
-		System.out.println("hhhhh>>>>>>>>>>>>>>>" + String.valueOf(cwnd));
 		if (cwnd + 1 >= this.senderMachine.getSsthresh()){
-			System.out.println("ssthresh ex");
 			this.senderMachine.ssthreshExceed();
 			return;
 		}
