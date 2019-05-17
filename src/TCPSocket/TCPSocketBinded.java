@@ -55,11 +55,13 @@ public class TCPSocketBinded extends TCPSocket {
 
     @Override
     public void receive(String pathToFile) throws Exception {
+//        int i = 0;
         while (true){
             byte[] data = new byte[datagramSocket.getPayloadLimitInBytes()];
             DatagramPacket packet = new DatagramPacket(data, data.length);
             try {
                 datagramSocket.receive(packet);
+//                i++;
             } catch (SocketTimeoutException socketTimeoutException){
                 this.timeOutNum++;
                 if (timeOutNum >= 3)
@@ -78,8 +80,13 @@ public class TCPSocketBinded extends TCPSocket {
                     this.shiftData(deliveredCount);
                 }
             }
-            Segment ackSegment = new Segment(false, true, datagramSocket.getLocalPort(),
-                    this.port, 0, this.expectedSeqNum, this.remainBuf);
+            Segment ackSegment;
+//            if (i > 1)
+                ackSegment = new Segment(false, true, datagramSocket.getLocalPort(),
+                        this.port, 0, this.expectedSeqNum, remainBuf);
+//            else
+//                ackSegment = new Segment(false, true, datagramSocket.getLocalPort(),
+//                        this.port, 0, this.expectedSeqNum, 0);
             datagramSocket.send(new DatagramPacket(ackSegment.getBytes(), ackSegment.getBytes().length,
                     InetAddress.getByName(this.ip), segment.getSourcePort()));
         }

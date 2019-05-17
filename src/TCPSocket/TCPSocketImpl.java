@@ -187,7 +187,6 @@ public class TCPSocketImpl extends TCPSocket {
 				toBeSent += blankFiller;
 				remained = chunk.substring(blank-1);
 			}
-//			byte[] data = getSendByteArray(i);
 			byte[] data = toBeSent.getBytes();
 			Segment segment = new Segment(data, false, false, this.myPort, this.port, seqNum++,
 					0, 2);
@@ -197,13 +196,4 @@ public class TCPSocketImpl extends TCPSocket {
 		this.sendLastSegment(toBeSent, segments, seqNum);
 	}
 
-//    private byte[] getSendByteArray(int index){
-//		int start = index;
-//		int end = 0;
-//		if (index > file.length() - segmentDataSize)
-//			end = file.length()-1;
-//		else
-//			end = index + segmentDataSize - 1;
-//		return file.substring(start, end).getBytes();
-//	}
 }

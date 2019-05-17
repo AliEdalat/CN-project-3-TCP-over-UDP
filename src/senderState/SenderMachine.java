@@ -38,21 +38,18 @@ public class SenderMachine {
 	private int remainBuf;
 
 	public void retransmitMissingSegment() {
-		if (rcvWindowSize >= 1) {
-			Segment segment = segments.get(this.base);
-			byte[] segmentBytes = segment.getBytes();
-			try {
-				datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
-						segment.getDestinationPort()));
-				this.rcvWindowSize--;
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+		Segment segment = segments.get(this.base);
+		byte[] segmentBytes = segment.getBytes();
+		try {
+			datagramSocket.send(new DatagramPacket(segmentBytes, segmentBytes.length, InetAddress.getByName(this.ip),
+					segment.getDestinationPort()));
+			this.remainBuf--;
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	
 	public void transmitNewSegments() {
-		this.remainBuf = rcvWindowSize;
 		for (int i = base; i < base+cwnd; i++){
 			if (remainBuf >= 1 && (segmentAcks.get(i) == false)) {
 				Segment segment = segments.get(i);
@@ -74,6 +71,7 @@ public class SenderMachine {
 		this.slowStartState = new SlowStartState(this);
 		this.congestionAvoidanceState = new CongestionAvoidanceState(this);
 		this.rcvWindowSize = 1;
+		this.remainBuf = 1;
 		this.cwnd = 1;
 		this.ssthresh = 3;
 		this.dupAckCount = 0;
@@ -117,6 +115,7 @@ public class SenderMachine {
 					if (base < segment.getAcknowledgmentNumber())
 						base = segment.getAcknowledgmentNumber();
 					rcvWindowSize = segment.getWindowSize();
+					remainBuf = rcvWindowSize;
 					if (base >= segments.size()){
 						break;
 					}
@@ -124,6 +123,7 @@ public class SenderMachine {
 					newAck();
 				} else if (segment.isAck() && isAcked(segment.getAcknowledgmentNumber())){
 					rcvWindowSize = segment.getWindowSize();
+					remainBuf = rcvWindowSize;
 					System.out.println("seqNum: " + base);
 					dupAck();
 				}
