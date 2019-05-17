@@ -28,7 +28,8 @@ public class TCPSocketImpl extends TCPSocket {
 	private String ip;
 	private int sequenceNumber = 100;
 	private static int RTT = 10000;
-	private static int segmentDataSize = 1392;
+	private static int segmentDataSize = 200;
+	private static int incomingRate = 100;
 	private String file;
 	private SenderMachine senderMachine;
 	
@@ -118,20 +119,8 @@ public class TCPSocketImpl extends TCPSocket {
 		ArrayList<Segment> segments = new ArrayList<>();
 		File currentDirFile = new File("src/" + pathToFile);
 		BufferedReader br = new BufferedReader(new FileReader(currentDirFile));
-		int seqNum = 0;
-		while (true){
-			String line = br.readLine();
-			if (line == null)
-				break;
-			line += "\n";
-			file += line;
-		}
-		for (int i = 0; i < file.length(); i+= segmentDataSize){
-			byte[] data = getSendByteArray(i);
-			Segment segment = new Segment(data, false, false, this.myPort, this.port, seqNum++,
-					0, 2);
-			segments.add(segment);
-		}
+		readFile(br);
+		this.makeMSSSegments(segments);
 		this.senderMachine = new SenderMachine(this.datagramSocket , this, segments);
 		this.senderMachine.run();
     }
@@ -155,13 +144,66 @@ public class TCPSocketImpl extends TCPSocket {
         return (long) senderMachine.getCwnd();
     }
 
-    private byte[] getSendByteArray(int index){
-		int start = index;
+    private void readFile(BufferedReader br) throws IOException {
+		while (true){
+			String line = br.readLine();
+			if (line == null)
+				break;
+			line += "\n";
+			file = file + line;
+		}
+	}
+
+    private String readOneChunk(int index){
 		int end = 0;
-		if (index > file.length() - segmentDataSize)
+		if (index > file.length() - incomingRate)
 			end = file.length()-1;
 		else
-			end = index + segmentDataSize - 1;
-		return file.substring(start, end).getBytes();
+			end = index + incomingRate - 1;
+		return file.substring(index, end);
 	}
+
+
+	private void sendLastSegment(String toBeSent, ArrayList<Segment> segments, int seqNum){
+		byte[] data = toBeSent.getBytes();
+		Segment segment = new Segment(data, false, false, this.myPort, this.port, seqNum++,
+				0, 2);
+		segments.add(segment);
+	}
+
+	private void makeMSSSegments(ArrayList<Segment> segments){
+    	int seqNum = 0;
+		String toBeSent = "";
+		String remained = "";
+		for (int i = 0; i < file.length(); i+= incomingRate){
+			String chunk = readOneChunk(i);
+			String temp = toBeSent + chunk;
+			if (temp.length() <= segmentDataSize) {
+				toBeSent += chunk;
+				continue;
+			} else {
+				int blank = segmentDataSize - toBeSent.length() - 1;
+				String blankFiller = chunk.substring(0,blank-1);
+				toBeSent += blankFiller;
+				remained = chunk.substring(blank-1);
+			}
+//			byte[] data = getSendByteArray(i);
+			byte[] data = toBeSent.getBytes();
+			Segment segment = new Segment(data, false, false, this.myPort, this.port, seqNum++,
+					0, 2);
+			segments.add(segment);
+			toBeSent = remained;
+		}
+		this.sendLastSegment(toBeSent, segments, seqNum);
+	}
+
+//    private byte[] getSendByteArray(int index){
+//		int start = index;
+//		int end = 0;
+//		if (index > file.length() - segmentDataSize)
+//			end = file.length()-1;
+//		else
+//			end = index + segmentDataSize - 1;
+//		return file.substring(start, end).getBytes();
+//	}
 }
